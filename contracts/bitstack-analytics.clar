@@ -42,3 +42,78 @@
 (define-data-var minimum-stake uint u1000000) ;; Minimum stake amount
 (define-data-var cooldown-period uint u1440) ;; 24 hour cooldown in blocks
 (define-data-var proposal-count uint u0)
+
+;; data maps
+(define-map Proposals
+    { proposal-id: uint }
+    {
+        creator: principal,
+        description: (string-utf8 256),
+        start-block: uint,
+        end-block: uint,
+        executed: bool,
+        votes-for: uint,
+        votes-against: uint,
+        minimum-votes: uint
+    }
+)
+
+(define-map UserPositions
+    principal
+    {
+        total-collateral: uint,
+        total-debt: uint,
+        health-factor: uint,
+        last-updated: uint,
+        stx-staked: uint,
+        analytics-tokens: uint,
+        voting-power: uint,
+        tier-level: uint,
+        rewards-multiplier: uint
+    }
+)
+
+(define-map StakingPositions
+    principal
+    {
+        amount: uint,
+        start-block: uint,
+        last-claim: uint,
+        lock-period: uint,
+        cooldown-start: (optional uint),
+        accumulated-rewards: uint
+    }
+)
+
+(define-map TierLevels
+    uint
+    {
+        minimum-stake: uint,
+        reward-multiplier: uint,
+        features-enabled: (list 10 bool)
+    }
+)
+
+;; private functions
+
+;; Retrieves tier information based on the stake amount
+(define-private (get-tier-info (stake-amount uint))
+    (if (>= stake-amount u10000000)
+        {tier-level: u3, reward-multiplier: u200}
+        (if (>= stake-amount u5000000)
+            {tier-level: u2, reward-multiplier: u150}
+            {tier-level: u1, reward-multiplier: u100}
+        )
+    )
+)
+
+;; Calculates the lock multiplier based on the lock period
+(define-private (calculate-lock-multiplier (lock-period uint))
+    (if (>= lock-period u8640)     ;; 2 months
+        u150                       ;; 1.5x multiplier
+        (if (>= lock-period u4320) ;; 1 month
+            u125                   ;; 1.25x multiplier
+            u100                   ;; 1x multiplier (no lock)
+        )
+    )
+)
